@@ -34,37 +34,35 @@ for i in `oc get projects --no-headers |grep Active |awk '{print $1}'`
 do
   oc observe -n $i --once pods \
     -a '{ .metadata.labels.deploymentconfig }'   \
-    -a '{ .metadata.labels.backup     }'   -- echo \
+    -a '{ .metadata.labels.backup     }' \
+    -a '{ .metadata.labels.backupvolumemount     }'   -- echo \
    |grep -v ^# \
-   |while read PROJECT POD DC BACKUP
+   |while read PROJECT POD DC BACKUP BACKUPVOLUMEMOUNT
   do
     [ "$BACKUP" == "" ] && continue
     echo "$POD in $PROJECT has the following BACKUP label: $BACKUP"
-    for TECH in ${BACKUP//,/ }
-    do
-      mkdir -p $DIR/../$TECH/$PROJECT  2>/dev/null
-      case $TECH in
-        mysql)
-          oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/mysql55/root/usr/bin:/opt/rh/rh-mysql56/root/usr/bin/ mysqldump -h 127.0.0.1 -u $MYSQL_USER --password=$MYSQL_PASSWORD $MYSQL_DATABASE' >$DIR/../mysql/$PROJECT/$DC.sql
-          ;;
-        postgresql)
-          oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'LD_LIBRARY_PATH=/opt/rh/rh-postgresql95/root/usr/lib64 PATH=$PATH:/opt/rh/rh-postgresql95/root/usr/bin pg_dump -Fc $POSTGRESQL_DATABASE ' >$DIR/../postgresql/$PROJECT/$DC.pg_dump_custom
-          ;;
-        fs:*)
-          array=(${TECH//:/ })
-	  FS=${array[1]}
-          if oc -n $PROJECT exec $POD -- test -d $FS
-          then
-            rsync -azv --dry-run --rsh='oc rsh' jenkins-4-dzd8c:$FS $DIR/../fs/$PROJECT/$FS
-          else
-            echo "ERROR: FS $FS is no valid directory in POD $POD!"
-          fi
-          ;;
-        *)
-          echo "ERROR: Unknown technology $TECH"
-          ;;
-      esac
-    done
+    mkdir -p $DIR/../$BACKUP/$PROJECT  2>/dev/null
+    case $BACKUP in
+      mysql)
+        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/mysql55/root/usr/bin:/opt/rh/rh-mysql56/root/usr/bin/ mysqldump -h 127.0.0.1 -u $MYSQL_USER --password=$MYSQL_PASSWORD $MYSQL_DATABASE' >$DIR/../mysql/$PROJECT/$DC.sql
+        ;;
+      postgresql)
+        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'LD_LIBRARY_PATH=/opt/rh/rh-postgresql95/root/usr/lib64 PATH=$PATH:/opt/rh/rh-postgresql95/root/usr/bin pg_dump -Fc $POSTGRESQL_DATABASE ' >$DIR/../postgresql/$PROJECT/$DC.pg_dump_custom
+        ;;
+      fs)
+        FS=$(oc -n $PROJECT volume pod/$POD --name "$BACKUPVOLUMEMOUNT"|grep "mounted at"|awk '{print $NF}')
+        if oc -n $PROJECT exec $POD -- test -d $FS
+        then
+          mkdir -p $DIR/../fs/$PROJECT/$FS/
+          rsync -az --delete --rsh="oc -n $PROJECT rsh" $POD:$FS/ $DIR/../fs/$PROJECT/$FS/
+        else
+          echo "ERROR: FS $FS is no valid directory in POD $POD!"
+        fi
+        ;;
+      *)
+        echo "ERROR: Unknown backup-method $BACKUP"
+        ;;
+    esac
   done
 done
 
