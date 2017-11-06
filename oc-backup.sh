@@ -54,7 +54,13 @@ do
         if oc -n $PROJECT exec $POD -- test -d $FS
         then
           mkdir -p $DIR/../fs/$PROJECT/$FS/
-          rsync -az --delete --rsh="oc -n $PROJECT rsh" $POD:$FS/ $DIR/../fs/$PROJECT/$FS/
+          # check if full rsync is available in container else failback to "oc rsync"
+          if oc -n $PROJECT exec $POD -- rsync --version >/dev/null 2>&1
+          then
+            rsync -az --delete --rsh="oc -n $PROJECT rsh" $POD:$FS/ $DIR/../fs/$PROJECT/$FS/
+          else
+            oc -n $PROJECT rsync --delete=true --quiet $POD:$FS/ $DIR/../fs/$PROJECT/$FS/
+          fi
         else
           echo "ERROR: FS $FS is no valid directory in POD $POD!"
         fi
