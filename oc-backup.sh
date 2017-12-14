@@ -50,7 +50,7 @@ do
         oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'LD_LIBRARY_PATH=/opt/rh/rh-postgresql95/root/usr/lib64 PATH=$PATH:/opt/rh/rh-postgresql95/root/usr/bin pg_dump -Fc $POSTGRESQL_DATABASE ' >$DIR/../postgresql/$PROJECT/$DC.pg_dump_custom
         ;;
       mongodb)
-        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/rh-mongodb32/root/usr/bin mongodump -u $MONGODB_USER -p $MONGODB_PASSWORD -d MONGODB_DATABASE --gzip --archive' >$DIR/../mongodb/$PROJECT/$DC.mongodump.gz
+        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/rh-mongodb32/root/usr/bin mongodump -u $MONGODB_USER -p $MONGODB_PASSWORD -d $MONGODB_DATABASE --gzip --archive' >$DIR/../mongodb/$PROJECT/$DC.mongodump.gz
         ;;
       fs)
         FS=$(oc -n $PROJECT volume pod/$POD --name "$BACKUPVOLUMEMOUNT"|grep "mounted at"|awk '{print $NF}')
