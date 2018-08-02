@@ -48,17 +48,17 @@ do
       mysql)
         DBNAME=$(oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'echo $MYSQL_DATABASE')
         echo "Backup database $DBNAME..."
-        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/mysql55/root/usr/bin:/opt/rh/rh-mysql56/root/usr/bin/ mysqldump -h 127.0.0.1 -u $MYSQL_USER --password=$MYSQL_PASSWORD $MYSQL_DATABASE' >$DIR/../mysql/$PROJECT/$DC/$DBNAME.sql
+        oc -n $PROJECT exec $POD -- /bin/bash -c 'mysqldump -h 127.0.0.1 -u $MYSQL_USER --password=$MYSQL_PASSWORD $MYSQL_DATABASE' >$DIR/../mysql/$PROJECT/$DC/$DBNAME.sql
         ;;
       postgresql)
         DBNAME=$(oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'echo $POSTGRESQL_DATABASE')
         echo "Backup database $DBNAME..."
-        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'LD_LIBRARY_PATH=/opt/rh/rh-postgresql95/root/usr/lib64 PATH=$PATH:/opt/rh/rh-postgresql95/root/usr/bin pg_dump -Fc $POSTGRESQL_DATABASE ' >$DIR/../postgresql/$PROJECT/$DC/$DBNAME.pg_dump_custom
+        oc -n $PROJECT exec $POD -- /bin/bash -c 'pg_dump -Fc $POSTGRESQL_DATABASE ' >$DIR/../postgresql/$PROJECT/$DC/$DBNAME.pg_dump_custom
         ;;
       mongodb)
         DBNAME=$(oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'echo $MONGODB_DATABASE')
         echo "Backup database $DBNAME..."
-        oc -n $PROJECT exec $POD -- /usr/bin/sh -c 'PATH=$PATH:/opt/rh/rh-mongodb32/root/usr/bin mongodump -u $MONGODB_USER -p $MONGODB_PASSWORD -d $MONGODB_DATABASE --gzip --archive' >$DIR/../mongodb/$PROJECT/$DC/$DBNAME.mongodump.gz
+        oc -n $PROJECT exec $POD -- /bin/bash -c 'mongodump -u $MONGODB_USER -p $MONGODB_PASSWORD -d $MONGODB_DATABASE --gzip --archive' >$DIR/../mongodb/$PROJECT/$DC/$DBNAME.mongodump.gz
         ;;
       fs)
         test -z "$BACKUPVOLUMEMOUNT" && echo "ERROR: Label 'backupvolumemount' not defined!" && continue
