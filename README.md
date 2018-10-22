@@ -17,6 +17,9 @@ It will backup:
     It will than rsync the mountpath to local directory
 
 ## Labeling
-The label "backup" needs to be set inside the deploymentconfig at the jsonpath '.spec.template.metadata.labels'.
-For backup type "fs" also the additional "backupvolumemount" label must reside there.
 
+The following labels have to be set:
+
+* The pods running the application need to have a "deploymentconfig" (auto-set by OpenShift for DeploymentConfig) or an "app" label.
+* The label "backup" needs to be set inside the deploymentconfig/deployment at the jsonpath '.spec.template.metadata.labels'.
+* For backup type "fs" also the additional "backupvolumemount" label must reside there.
