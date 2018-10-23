@@ -15,7 +15,7 @@ do
   oc export namespace $i >ns.yml
   oc export project   $i >project.yml
   #for j in pods replicationcontrollers deploymentconfigs buildconfigs services routes pvc quota hpa secrets configmaps daemonsets deployments endpoints imagestreams ingress scheduledjobs jobs limitranges policies policybindings roles rolebindings resourcequotas replicasets serviceaccounts templates oauthclients petsets
-  for j in deploymentconfigs buildconfigs services routes pvc secrets configmaps endpoints imagestreams policies policybindings roles rolebindings serviceaccounts 
+  for j in deployments statefulsets deploymentconfigs buildconfigs services routes pvc secrets configmaps endpoints imagestreams policies policybindings roles rolebindings serviceaccounts 
   do
     mkdir $j
     cd $j
@@ -31,17 +31,14 @@ done
 
 
 ### Databases ###
-for i in `oc get projects --no-headers |grep Active |awk '{print $1}'`
+for PROJECT in `oc get projects --no-headers |grep Active |awk '{print $1}'`
 do
-  oc observe -n $i --once pods \
-    -a '{ .metadata.labels.deploymentconfig }'   \
-    -a '{ .metadata.labels.backup     }' \
-    -a '{ .metadata.labels.backupvolumemount     }'   -- echo \
-   |grep -v ^# \
-   |while read PROJECT POD DC BACKUP BACKUPVOLUMEMOUNT
+  oc get pods -n $PROJECT --output=go-template='{{range .items}}{{if .metadata.labels.backup}}{{.metadata.name}} {{or .metadata.labels.deploymentconfig (or .metadata.labels.app "-")}} {{ or .metadata.labels.backup "-"}} {{ or .metadata.labels.backupvolumemount "-" }}{{"\n"}}{{end}}{{end}}' \
+   |while read POD DC BACKUP BACKUPVOLUMEMOUNT
   do
-    [ "$BACKUP" == "" ] && continue
-    echo "$POD in $PROJECT has the following BACKUP label: $BACKUP"
+    [ "$BACKUP" == "-" ] && continue
+    [ "$DC" == "-" ] && echo "ERROR: No app or deploymentconfig label for pod $POD" && continue
+    echo "$POD in $PROJECT has the following \"backup\" label: $BACKUP"
     mkdir -p $DIR/../$BACKUP/$PROJECT/$DC  2>/dev/null
     DBNAME=""
     case $BACKUP in
